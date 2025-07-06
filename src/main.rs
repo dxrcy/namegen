@@ -5,7 +5,7 @@ mod corpus;
 mod error;
 mod params;
 
-use std::io::{self, BufWriter};
+use std::fmt;
 
 use chrono::{DateTime, Local};
 use clap::Parser;
@@ -25,17 +25,18 @@ fn main() {
     });
 
     let mut corpus = Corpus::new(directory);
-    let mut stdout = BufWriter::new(io::stdout());
+    let mut output = String::new();
     let mut rng = rand::rng();
     let date = Local::now();
 
-    if let Err(error) = display(&mut stdout, &mut rng, &mut corpus, &date, &args.format) {
-        eprintln!("namegen: {}", error);
+    match display(&mut output, &mut rng, &mut corpus, &date, &args.format) {
+        Ok(()) => println!("{}", output),
+        Err(error) => eprintln!("namegen: {}", error),
     }
 }
 
 fn display(
-    w: &mut impl io::Write,
+    w: &mut impl fmt::Write,
     rng: &mut impl Rng,
     corpus: &mut Corpus,
     date: &DateTime<Local>,
@@ -97,7 +98,6 @@ fn display(
         }
     }
 
-    writeln!(w)?;
     Ok(())
 }
 
