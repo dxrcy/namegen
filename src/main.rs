@@ -5,7 +5,7 @@ mod corpus;
 mod error;
 mod params;
 
-use std::io;
+use std::io::{self, BufWriter};
 
 use chrono::{DateTime, Local};
 use clap::Parser;
@@ -25,7 +25,7 @@ fn main() {
     });
 
     let mut corpus = Corpus::new(directory);
-    let mut stdout = io::stdout();
+    let mut stdout = BufWriter::new(io::stdout());
     let mut rng = rand::rng();
     let date = Local::now();
 
