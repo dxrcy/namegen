@@ -6,7 +6,6 @@ mod error;
 mod params;
 
 use std::io;
-use std::path::PathBuf;
 
 use clap::Parser;
 use rand::Rng;
@@ -17,7 +16,14 @@ use self::params::Params;
 
 fn main() {
     let args = args::Args::parse();
-    let mut corpus = Corpus::new(PathBuf::from("corpus"));
+
+    let directory = args.corpus.unwrap_or_else(|| {
+        let parent =
+            dirs_next::data_dir().expect("Failed to find 'data' directory (XDG_DATA_HOME)");
+        parent.join("namegen")
+    });
+
+    let mut corpus = Corpus::new(directory);
     let mut stdout = io::stdout();
     let mut rng = rand::rng();
 
