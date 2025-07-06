@@ -6,51 +6,40 @@ use rand::Rng;
 
 type CorpusList = Vec<String>;
 
-macro_rules! corpus {
-    ( $( $name:ident ),* $(,)? ) => {
-        pub struct Corpus {
-            directory: PathBuf,
-            $( $name: Option<CorpusList>, )*
-        }
-
-        impl Corpus {
-            pub fn new(directory: PathBuf) -> Self {
-                Self {
-                    directory,
-                    $( $name: None, )*
-                }
-            }
-
-            $(
-                pub fn $name(&mut self, rng: &mut impl Rng) -> io::Result<&str> {
-                    random_entry(
-                        rng,
-                        &self.directory,
-                        stringify!($name),
-                        &mut self.$name,
-                    )
-                }
-            )*
-        }
-    };
+pub struct Corpus {
+    directory: PathBuf,
+    lists: Vec<(&'static str, CorpusList)>,
 }
 
-corpus![noun, adjective, color];
-
-fn random_entry<'a>(
-    rng: &mut impl Rng,
-    directory: &PathBuf,
-    name: &str,
-    list: &'a mut Option<CorpusList>,
-) -> io::Result<&'a str> {
-    if list.is_none() {
-        *list = Some(read_file(directory, name)?);
+impl Corpus {
+    pub fn new(directory: PathBuf) -> Self {
+        Self {
+            directory,
+            lists: Vec::new(),
+        }
     }
-    let list = list.as_mut().unwrap();
 
-    assert!(!list.is_empty());
-    let index = rng.random_range(0..list.len());
-    Ok(&list[index])
+    pub fn get(&mut self, name: &'static str, rng: &mut impl Rng) -> io::Result<&str> {
+        // TODO(feat): Handle empty list (empty file)
+        let list = self.get_list(name)?;
+        assert!(!list.is_empty(), "empty file");
+        let index = rng.random_range(0..list.len());
+        Ok(&list[index])
+    }
+
+    fn get_list(&mut self, name: &'static str) -> io::Result<&CorpusList> {
+        // Current (stable) borrow rules prevent this from being written nicer
+        for i in 0..self.lists.len() {
+            if self.lists[i].0 == name {
+                return Ok(&self.lists[i].1);
+            }
+        }
+
+        let list = read_file(&self.directory, name)?;
+        self.lists.push((name, list));
+        let (_, list) = self.lists.last().expect("item was just pushed above");
+        Ok(list)
+    }
 }
 
 fn read_file(directory: impl AsRef<Path>, name: &str) -> io::Result<CorpusList> {

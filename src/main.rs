@@ -56,9 +56,9 @@ fn display(
                 continue;
             }
 
-            ('%', 'N') => corpus.noun(rng)?,
-            ('%', 'A') => corpus.adjective(rng)?,
-            ('%', 'C') => corpus.color(rng)?,
+            ('%', 'N') => corpus.get("noun", rng)?,
+            ('%', 'A') => corpus.get("adjective", rng)?,
+            ('%', 'C') => corpus.get("color", rng)?,
 
             ('%', 'd' | 'x' | 'X' | 'l' | 'L') => {
                 for _ in 0..params.width.unwrap_or(1) {
