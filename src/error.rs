@@ -14,9 +14,9 @@ impl fmt::Display for Error {
         match self {
             Self::IO(error) => write!(f, "{}", error),
             Self::UnknownSpecifier(symbol, specifier) => {
-                write!(f, "unknown specifier `{}{}`", symbol, specifier,)
+                write!(f, "Unknown specifier '{}{}'", symbol, specifier)
             }
-            Self::TrailingSymbol(symbol) => write!(f, "trailing symbol `{}`", symbol),
+            Self::TrailingSymbol(symbol) => write!(f, "Trailing symbol '{}'", symbol),
         }
     }
 }

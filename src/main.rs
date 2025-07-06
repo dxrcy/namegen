@@ -29,7 +29,9 @@ fn main() {
     let mut rng = rand::rng();
     let date = Local::now();
 
-    display(&mut stdout, &mut rng, &mut corpus, &date, &args.format).unwrap();
+    if let Err(error) = display(&mut stdout, &mut rng, &mut corpus, &date, &args.format) {
+        eprintln!("namegen: {}", error);
+    }
 }
 
 fn display(
