@@ -1,6 +1,9 @@
+#![allow(clippy::uninlined_format_args)]
+
 mod args;
 mod corpus;
 mod error;
+mod params;
 
 use std::io;
 use std::path::PathBuf;
@@ -10,6 +13,7 @@ use rand::Rng;
 
 use self::corpus::Corpus;
 use self::error::Error;
+use self::params::Params;
 
 fn main() {
     let args = args::Args::parse();
@@ -33,24 +37,45 @@ fn display(
             write!(w, "{}", ch)?;
             continue;
         }
-        let Some(specifier) = chars.next() else {
-            return Err(Error::TrailingSymbol);
-        };
 
-        let word = match specifier {
+        let params = Params::parse_from(&mut chars)?;
+
+        let word = match params.specifier {
             '%' => {
                 write!(w, "{}", ch)?;
                 continue;
             }
 
-            'n' => corpus.noun(rng)?,
-            'a' => corpus.adjective(rng)?,
-            'c' => corpus.color(rng)?,
+            'N' => corpus.noun(rng)?,
+            'A' => corpus.adjective(rng)?,
+            'C' => corpus.color(rng)?,
 
-            _ => return Err(Error::UnknownSpecifier(specifier)),
+            'd' | 'x' | 'X' => {
+                for _ in 0..params.width.unwrap_or(1) {
+                    match params.specifier {
+                        'd' => write!(w, "{}", rng.random_range(0..10))?,
+                        'x' => write!(w, "{:x}", rng.random_range(0..16))?,
+                        'X' => write!(w, "{:X}", rng.random_range(0..16))?,
+                        _ => unreachable!(),
+                    }
+                }
+                continue;
+            }
+
+            specifier => return Err(Error::UnknownSpecifier(specifier)),
         };
 
-        write!(w, "{}", word)?;
+        if params.reverse {
+            write!(w, "{}", word)?;
+        }
+        if let Some(width) = params.width {
+            for _ in word.len()..width as usize {
+                write!(w, ".")?;
+            }
+        }
+        if !params.reverse {
+            write!(w, "{}", word)?;
+        }
     }
 
     writeln!(w)?;
