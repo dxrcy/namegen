@@ -1,18 +1,20 @@
-use std::str::Chars;
+use std::{iter::Peekable, str::Chars};
 
 use crate::error::Error;
 
 pub struct Params {
+    pub symbol: char,
     pub specifier: char,
     pub width: Option<u32>,
     pub reverse: bool,
 }
 
 impl Params {
-    pub fn parse_from(chars: &mut Chars<'_>) -> Result<Self, Error> {
-        // This function must consume peeked char before returning `Ok`.
-        // This happens when consuming specifier
-        let mut chars = chars.peekable();
+    pub fn parse_from(chars: &mut Peekable<Chars<'_>>) -> Result<Option<Self>, Error> {
+        let Some(symbol) = chars.peek().copied().filter(|ch| matches!(ch, '%' | '@')) else {
+            return Ok(None);
+        };
+        chars.next();
 
         let mut width = None;
         let mut reverse = false;
@@ -31,13 +33,14 @@ impl Params {
         }
 
         let Some(specifier) = chars.next() else {
-            return Err(Error::TrailingSymbol);
+            return Err(Error::TrailingSymbol(symbol));
         };
 
-        Ok(Self {
+        Ok(Some(Self {
+            symbol,
             specifier,
             width,
             reverse,
-        })
+        }))
     }
 }

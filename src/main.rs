@@ -7,6 +7,7 @@ mod params;
 
 use std::io;
 
+use chrono::{DateTime, Local};
 use clap::Parser;
 use rand::Rng;
 
@@ -26,37 +27,38 @@ fn main() {
     let mut corpus = Corpus::new(directory);
     let mut stdout = io::stdout();
     let mut rng = rand::rng();
+    let date = Local::now();
 
-    display(&mut stdout, &mut rng, &mut corpus, &args.format).unwrap();
+    display(&mut stdout, &mut rng, &mut corpus, &date, &args.format).unwrap();
 }
 
 fn display(
     w: &mut impl io::Write,
     rng: &mut impl Rng,
     corpus: &mut Corpus,
+    date: &DateTime<Local>,
     format: &str,
 ) -> Result<(), Error> {
-    let mut chars = format.chars();
+    let mut chars = format.chars().peekable();
 
-    while let Some(ch) = chars.next() {
-        if ch != '%' {
+    while let Some(ch) = chars.peek().copied() {
+        let Some(params) = Params::parse_from(&mut chars)? else {
             write!(w, "{}", ch)?;
+            chars.next();
             continue;
-        }
+        };
 
-        let params = Params::parse_from(&mut chars)?;
-
-        let word = match params.specifier {
-            '%' => {
-                write!(w, "{}", ch)?;
+        let word = match (params.symbol, params.specifier) {
+            (_, '%' | '@') => {
+                write!(w, "{}", params.specifier)?;
                 continue;
             }
 
-            'N' => corpus.noun(rng)?,
-            'A' => corpus.adjective(rng)?,
-            'C' => corpus.color(rng)?,
+            ('%', 'N') => corpus.noun(rng)?,
+            ('%', 'A') => corpus.adjective(rng)?,
+            ('%', 'C') => corpus.color(rng)?,
 
-            'd' | 'x' | 'X' => {
+            ('%', 'd' | 'x' | 'X') => {
                 for _ in 0..params.width.unwrap_or(1) {
                     match params.specifier {
                         'd' => write!(w, "{}", rng.random_range(0..10))?,
@@ -68,7 +70,14 @@ fn display(
                 continue;
             }
 
-            specifier => return Err(Error::UnknownSpecifier(specifier)),
+            ('@', specifier) if is_date_specifier(specifier) => {
+                let mut buffer = [0u8; 2];
+                let format = date.format(date_format(&mut buffer, specifier));
+                write!(w, "{}", format)?;
+                continue;
+            }
+
+            (symbol, specifier) => return Err(Error::UnknownSpecifier(symbol, specifier)),
         };
 
         if params.reverse {
@@ -86,4 +95,22 @@ fn display(
 
     writeln!(w)?;
     Ok(())
+}
+
+#[rustfmt::skip]
+fn is_date_specifier(ch: char) -> bool {
+    matches!(
+        ch,
+        'Y' | 'C' | 'y' | 'q' | 'm' | 'b' | 'B' | 'd' | 'a' | 'A' | 'w' | 'u' | 'U'
+            | 'W' | 'G' | 'g' | 'V' | 'j' | 'D' | 'x' | 'F' | 'v' | 'H' | 'I' | 'P'
+            | 'p' | 'M' | 'S' | 'f' | 'R' | 'T' | 'X' | 'r' | 'Z' | 'z' | '+' | 's'
+    )
+}
+
+fn date_format(buffer: &mut [u8; 2], specifier: char) -> &str {
+    assert!(specifier.is_ascii());
+    buffer[0] = b'%';
+    buffer[1] = specifier as u8;
+    // SAFETY: All items of buffer are known to be valid ASCII, and thus valid UTF-8
+    unsafe { str::from_utf8_unchecked(buffer) }
 }

@@ -3,8 +3,8 @@ use std::{fmt, io};
 #[derive(Debug)]
 pub enum Error {
     IO(io::Error),
-    UnknownSpecifier(char),
-    TrailingSymbol,
+    UnknownSpecifier(char, char),
+    TrailingSymbol(char),
 }
 
 impl std::error::Error for Error {}
@@ -13,8 +13,10 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IO(error) => write!(f, "{}", error),
-            Self::UnknownSpecifier(specifier) => write!(f, "unknown specifier `%{}`", specifier),
-            Self::TrailingSymbol => write!(f, "trailing `%`"),
+            Self::UnknownSpecifier(symbol, specifier) => {
+                write!(f, "unknown specifier `{}{}`", symbol, specifier,)
+            }
+            Self::TrailingSymbol(symbol) => write!(f, "trailing symbol `{}`", symbol),
         }
     }
 }
