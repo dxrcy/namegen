@@ -58,12 +58,14 @@ fn display(
             ('%', 'A') => corpus.adjective(rng)?,
             ('%', 'C') => corpus.color(rng)?,
 
-            ('%', 'd' | 'x' | 'X') => {
+            ('%', 'd' | 'x' | 'X' | 'l' | 'L') => {
                 for _ in 0..params.width.unwrap_or(1) {
                     match params.specifier {
                         'd' => write!(w, "{}", rng.random_range(0..10))?,
                         'x' => write!(w, "{:x}", rng.random_range(0..16))?,
                         'X' => write!(w, "{:X}", rng.random_range(0..16))?,
+                        'l' => write!(w, "{}", rng.random_range('a'..='z'))?,
+                        'L' => write!(w, "{}", rng.random_range('A'..='Z'))?,
                         _ => unreachable!(),
                     }
                 }
